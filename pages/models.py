@@ -22,6 +22,7 @@ class Resource(models.Model):
         on_delete=models.PROTECT,
         related_name="resources",
     )
+    resource_type = models.CharField(max_length=40, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
