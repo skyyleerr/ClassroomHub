@@ -1,64 +1,106 @@
 # ClassroomHub
 
-Portal web de recursos de aprendizaje construido con Django como primera aplicación del Laboratorio 06 (Python, programa ADSO). Muestra tres páginas navegables que comparten una plantilla base y datos de ejemplo enviados desde las vistas.
+Portal web de recursos de aprendizaje construido con Django (programa ADSO, laboratorios de Python). El Laboratorio 06 creó las tres páginas con plantillas compartidas; el Laboratorio 07 sustituye la lista de recursos escrita en `views.py` por un catálogo **persistente en MySQL o MariaDB**, administrable desde Django Admin.
 
-## Versiones
+## Requisitos
 
-- Python 3.12 – 3.15 (desarrollado y probado con Python 3.13)
-- Django 6.1.3 (fijado en `requirements.txt`)
+- Python 3.12 – 3.15 (probado con Python 3.13)
+- Django 6.1.3, `mysqlclient` y `python-dotenv` (fijados en `requirements.txt`)
+- Servidor **MariaDB 10.11 o superior** o **MySQL 8.4 o superior** (mínimos para Django 6.1). Probado con MariaDB 10.11.
+- Permisos para crear una base de datos y una cuenta SQL local.
+- `mysqlclient` puede necesitar encabezados del cliente, compilador y `pkg-config` en Linux/macOS; en Windows suele instalarse ya compilado.
 
-> Con Python 3.10 u 3.11 usa `Django==5.2.19` en lugar de `Django==6.1.3`.
+> Con Python 3.10 u 3.11 usa la rama Django 5.2 LTS (`Django==5.2.19`).
 
-## Instalación
+## 1. Preparar la base de datos
+
+Con una cuenta administrativa del servidor (cambia la contraseña de ejemplo):
+
+```sql
+CREATE DATABASE IF NOT EXISTS classroom_hub
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+CREATE USER IF NOT EXISTS 'classroomhub_user'@'127.0.0.1'
+    IDENTIFIED BY 'replace_with_a_private_password';
+
+GRANT ALL PRIVILEGES ON classroom_hub.*      TO 'classroomhub_user'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON test_classroom_hub.* TO 'classroomhub_user'@'127.0.0.1';
+```
+
+La cuenta solo tiene permisos sobre dos esquemas: el de desarrollo y el descartable de pruebas. No se usa `root` ni se concede `ALL ON *.*`.
+
+## 2. Instalar el proyecto
 
 ```bash
 python -m venv .venv
 ```
 
-Activar el entorno:
-
-- Windows PowerShell: `.\.venv\Scripts\Activate.ps1`
-- Linux/macOS: `source .venv/bin/activate`
-
-Instalar dependencias:
+Activar el entorno: Windows PowerShell `.\.venv\Scripts\Activate.ps1`, Linux/macOS `source .venv/bin/activate`.
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-## Verificación y ejecución
+## 3. Configurar variables de entorno
+
+Copia la plantilla y escribe tu contraseña real en `.env` (este archivo **no se versiona**):
+
+```bash
+cp .env.example .env        # Windows: copy .env.example .env
+```
+
+```dotenv
+DB_NAME=classroom_hub
+DB_USER=classroomhub_user
+DB_PASSWORD=replace_with_a_private_password
+DB_HOST=127.0.0.1
+DB_PORT=3306
+```
+
+## 4. Migraciones, administrador y arranque
 
 ```bash
 python manage.py check
-python manage.py test pages
+python manage.py migrate
+python manage.py showmigrations pages
+python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Abrir http://127.0.0.1:8000/ en el navegador. Si el puerto está ocupado: `python manage.py runserver 8001`.
+El superusuario es una cuenta de Django, distinta del usuario SQL. Abre http://127.0.0.1:8000/admin/, crea categorías y recursos, y revisa http://127.0.0.1:8000/resources/.
 
-## Rutas públicas
+## Rutas
 
 | Ruta | Nombre | Descripción |
 |---|---|---|
-| `/` | `pages:home` | Página principal con mensaje de bienvenida |
-| `/resources/` | `pages:resources` | Lista de recursos con su estado de disponibilidad |
+| `/` | `pages:home` | Página principal |
+| `/resources/` | `pages:resources` | Recursos consultados con el ORM (título, descripción, categoría y disponibilidad); muestra un mensaje si el catálogo está vacío |
+| `/resources/available/` | `pages:available_resources` | Solo recursos disponibles (reto adicional, solo lectura) |
 | `/about/` | `pages:about` | Propósito del proyecto |
+| `/admin/` | — | Django Admin (categorías y recursos) |
 
-Cualquier otra dirección responde `404 Not Found`.
+Cualquier otra dirección responde `404`.
 
-## Estructura
+## Modelos
 
-```text
-config/   configuración del proyecto (settings.py, urls.py)
-pages/    aplicación: urls.py, views.py, tests.py y templates/pages/
-```
+- `Category`: `name` (único), `description`.
+- `Resource`: `title`, `description`, `available`, `resource_type`, `created_at` y `category` (`ForeignKey` con `related_name="resources"` y `on_delete=PROTECT`, por lo que no se puede borrar una categoría que tenga recursos).
 
-Las plantillas `home.html`, `resources.html` y `about.html` heredan de `base.html`, y la navegación usa nombres de ruta con `{% url %}`.
+Migraciones: `0001_initial` (tablas), `0002_align_id_fields` (ids `BigAutoField` de Django 6.1) y `0003_resource_resource_type` (nuevo campo opcional).
 
 ## Pruebas
 
-`python manage.py test pages` ejecuta cinco pruebas automatizadas: respuesta y plantilla de cada página, enlace de navegación construido con `reverse()` y respuesta 404 para una ruta inexistente.
+```bash
+python manage.py test pages
+```
+
+Ejecuta 11 pruebas con `TestCase`: las diez del laboratorio (páginas, navegación, 404, categoría relacionada, persistencia, protección de borrado, catálogo vacío y relación inversa) más la de `/resources/available/`. Django crea y destruye la base separada `test_classroom_hub`; la base `classroom_hub` no se modifica.
+
+## Qué no se versiona
+
+`.venv/`, `.env`, `db.sqlite3`, `__pycache__/` y `*.log`. Solo se publica `.env.example` con valores demostrativos. Los archivos de migración sí se versionan.
 
 ## Funcionalidades pendientes
 
-Este laboratorio no incluye base de datos propia, modelos, migraciones, formularios, autenticación ni operaciones CRUD. Los recursos son datos de ejemplo definidos en `pages/views.py`. Se abordarán en el Laboratorio 7 (modelos, ORM, migraciones y administrador de Django).
+Registro público de usuarios, autenticación propia, formularios públicos, CRUD desde vistas personalizadas y API REST. El siguiente laboratorio incorpora autenticación, sesiones, grupos y permisos.
