@@ -1,4 +1,5 @@
-from django.shortcuts import render
+from django.contrib.auth.forms import UserCreationForm
+from django.shortcuts import redirect, render
 
 from .models import Resource
 
@@ -28,3 +29,18 @@ def available_resources(request):
         "resources": Resource.objects.select_related("category").filter(available=True),
     }
     return render(request, "pages/resources.html", context)
+
+
+def signup(request):
+    if request.user.is_authenticated:
+        return redirect("pages:dashboard")
+
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("pages:login")
+    else:
+        form = UserCreationForm()
+
+    return render(request, "pages/signup.html", {"form": form})
