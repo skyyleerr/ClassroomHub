@@ -1,3 +1,4 @@
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.shortcuts import redirect, render
 
@@ -44,3 +45,15 @@ def signup(request):
         form = UserCreationForm()
 
     return render(request, "pages/signup.html", {"form": form})
+
+
+@login_required
+def dashboard(request):
+    visit_count = request.session.get("dashboard_visits", 0) + 1
+    request.session["dashboard_visits"] = visit_count
+
+    return render(
+        request,
+        "pages/dashboard.html",
+        {"visit_count": visit_count},
+    )

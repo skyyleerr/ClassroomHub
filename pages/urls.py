@@ -21,5 +21,6 @@ urlpatterns = [
         auth_views.LogoutView.as_view(),
         name="logout",
     ),
+    path("dashboard/", views.dashboard, name="dashboard"),
 ]
 
