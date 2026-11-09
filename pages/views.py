@@ -1,8 +1,14 @@
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.mixins import (
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+)
 from django.shortcuts import redirect, render
-from django.views.generic import DetailView
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, DetailView
 
+from .forms import ResourceForm
 from .models import Resource
 
 
@@ -73,3 +79,15 @@ class ResourceDetailView(DetailView):
     model = Resource
     template_name = "pages/resource_detail.html"
     context_object_name = "resource"
+
+
+class ResourceCreateView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    CreateView,
+):
+    model = Resource
+    form_class = ResourceForm
+    template_name = "pages/resource_form.html"
+    permission_required = "pages.add_resource"
+    success_url = reverse_lazy("pages:resources")
