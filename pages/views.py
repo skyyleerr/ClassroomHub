@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.forms import UserCreationForm
 from django.shortcuts import redirect, render
+from django.views.generic import DetailView
 
 from .models import Resource
 
@@ -66,3 +67,9 @@ def resource_review(request):
         "resources": Resource.objects.select_related("category").all(),
     }
     return render(request, "pages/review.html", context)
+
+
+class ResourceDetailView(DetailView):
+    model = Resource
+    template_name = "pages/resource_detail.html"
+    context_object_name = "resource"

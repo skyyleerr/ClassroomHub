@@ -13,6 +13,11 @@ urlpatterns = [
         views.resource_review,
         name="resource-review",
     ),
+    path(
+        "resources/<int:pk>/",
+        views.ResourceDetailView.as_view(),
+        name="resource-detail",
+    ),
     path("about/", views.about, name="about"),
     path("resources/available/", views.available_resources, name="available_resources"),
     path("accounts/signup/", views.signup, name="signup"),
