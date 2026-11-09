@@ -6,7 +6,12 @@ from django.contrib.auth.mixins import (
 )
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DetailView
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    UpdateView,
+)
 
 from .forms import ResourceForm
 from .models import Resource
@@ -90,4 +95,27 @@ class ResourceCreateView(
     form_class = ResourceForm
     template_name = "pages/resource_form.html"
     permission_required = "pages.add_resource"
+    success_url = reverse_lazy("pages:resources")
+
+
+class ResourceUpdateView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    UpdateView,
+):
+    model = Resource
+    form_class = ResourceForm
+    template_name = "pages/resource_form.html"
+    permission_required = "pages.change_resource"
+    success_url = reverse_lazy("pages:resources")
+
+
+class ResourceDeleteView(
+    LoginRequiredMixin,
+    PermissionRequiredMixin,
+    DeleteView,
+):
+    model = Resource
+    template_name = "pages/resource_confirm_delete.html"
+    permission_required = "pages.delete_resource"
     success_url = reverse_lazy("pages:resources")
