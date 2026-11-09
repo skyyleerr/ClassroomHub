@@ -1,6 +1,6 @@
 # ClassroomHub
 
-Portal web de recursos de aprendizaje construido con Django (programa ADSO, laboratorios de Python). El Laboratorio 06 creó las tres páginas con plantillas compartidas; el Laboratorio 07 sustituye la lista de recursos escrita en `views.py` por un catálogo **persistente en MySQL o MariaDB**, administrable desde Django Admin; el Laboratorio 08 añade **registro, inicio y cierre de sesión, panel con contador de sesión y revisión protegida por grupo y permiso**.
+Portal web de recursos de aprendizaje construido con Django (programa ADSO, laboratorios de Python). El Laboratorio 06 creó las tres páginas con plantillas compartidas; el Laboratorio 07 sustituye la lista de recursos escrita en `views.py` por un catálogo **persistente en MySQL o MariaDB**, administrable desde Django Admin; el Laboratorio 08 añade **registro, inicio y cierre de sesión, panel con contador de sesión y revisión protegida por grupo y permiso**; el Laboratorio 09 añade **CRUD de recursos desde páginas propias (ModelForm + vistas genéricas) protegido por permisos**.
 
 ## Requisitos
 
@@ -86,6 +86,21 @@ g.permissions.add(Permission.objects.get(codename="view_resource", content_type_
 
 Comportamiento esperado de `/resources/review/`: anónimo → redirige a login con `?next=`; autenticado sin permiso → `403`; miembro del grupo → `200`.
 
+### Grupo `Catalog editors` (Laboratorio 09)
+
+Crea un segundo grupo, **distinto** de `Catalog reviewers`, con los permisos `view_resource`, `add_resource`, `change_resource` y `delete_resource` de `pages | resource`. Desde Admin (Groups) o por consola:
+
+```python
+from django.contrib.auth.models import Group, Permission
+codes = ["view_resource", "add_resource", "change_resource", "delete_resource"]
+perms = Permission.objects.filter(content_type__app_label="pages", content_type__model="resource", codename__in=codes)
+assert perms.count() == 4
+g, _ = Group.objects.get_or_create(name="Catalog editors")
+g.permissions.add(*perms)
+```
+
+Después, en Admin > Users, asigna el grupo **solo** a una cuenta de demostración. **El formulario público de registro no asigna grupos ni permisos**, y los editores no necesitan `is_staff`. Las categorías se siguen creando desde Admin (el `ModelForm` solo permite elegir categorías existentes).
+
 ## Rutas
 
 | Ruta | Nombre | Acceso | Descripción |
@@ -93,6 +108,10 @@ Comportamiento esperado de `/resources/review/`: anónimo → redirige a login c
 | `/` | `pages:home` | público | Página principal |
 | `/resources/` | `pages:resources` | público | Recursos consultados con el ORM; mensaje si el catálogo está vacío |
 | `/resources/available/` | `pages:available_resources` | público | Solo recursos disponibles (reto adicional) |
+| `/resources/new/` | `pages:resource-create` | permiso `pages.add_resource` | GET formulario / POST crea (redirige a `/resources/`) |
+| `/resources/<pk>/` | `pages:resource-detail` | público | Detalle de un recurso (404 si no existe) |
+| `/resources/<pk>/edit/` | `pages:resource-update` | permiso `pages.change_resource` | GET formulario con datos / POST actualiza la misma fila |
+| `/resources/<pk>/delete/` | `pages:resource-delete` | permiso `pages.delete_resource` | GET solo confirma / POST elimina |
 | `/resources/review/` | `pages:resource-review` | login + permiso `pages.view_resource` | Revisión del catálogo |
 | `/about/` | `pages:about` | público | Propósito del proyecto |
 | `/accounts/signup/` | `pages:signup` | público | Registro con `UserCreationForm` |
@@ -116,7 +135,7 @@ Migraciones: `0001_initial` (tablas), `0002_align_id_fields` (ids `BigAutoField`
 python manage.py test pages
 ```
 
-Ejecuta 29 pruebas con `TestCase`: las 11 del Laboratorio 07 más 18 de autenticación (registro, login, logout por POST/CSRF, contador de sesión, redirecciones y 403 por permisos). Django crea y destruye la base separada `test_classroom_hub`; la base `classroom_hub` no se modifica.
+Ejecuta 59 pruebas con `TestCase`: 11 del Laboratorio 07, 18 del Laboratorio 08 y 30 del Laboratorio 09 (detalle, creación, edición y eliminación, validación del formulario, 404, 403/redirección por permisos y CSRF). Django crea y destruye la base separada `test_classroom_hub`; la base `classroom_hub` no se modifica.
 
 ## Qué no se versiona
 
@@ -124,4 +143,4 @@ Ejecuta 29 pruebas con `TestCase`: las 11 del Laboratorio 07 más 18 de autentic
 
 ## Funcionalidades pendientes
 
-Recuperación de contraseña, verificación de correo, CRUD desde vistas personalizadas y API REST.
+CRUD público de categorías, búsqueda y filtros, carga de archivos, recuperación de contraseña, verificación de correo y API REST.
